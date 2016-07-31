@@ -12,6 +12,7 @@
 #define PORTNO 6500
 uint8_t buffer[256];
 uint8_t *message = "The message";
+const char *IP = "127.0.0.1";
 
 int main(int argc, char *argv[])
 {
@@ -19,7 +20,7 @@ int main(int argc, char *argv[])
 	int msock;
 	struct sockaddr_in addr_server;
 
-    inet_pton(AF_INET, "127.0.0.1", &addr_server.sin_addr);
+    inet_pton(AF_INET, IP , &addr_server.sin_addr);
 	addr_server.sin_family = AF_INET;
 	addr_server.sin_port = htons(PORTNO);
 
