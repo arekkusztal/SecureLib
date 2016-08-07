@@ -8,6 +8,35 @@ enum TLS_content_types {
 
 };
 
+enum TLS_ext_srv_name_type {
+	HOST_NAME	= 0,
+};
+
+
+enum TLS_extenstions {
+	TLS_EXT_SRV_NAME = 0,
+	TLS_EXT_RENEGOTIATION_INFO = 0xFF01,
+	TLS_EXT_ELLIPTIC_CURVES = 0x000A,
+
+};
+
+enum TLS_elliptic_curve {
+	TLS_EC_SECP256R1 = 0x17,
+	TLS_EC_SECP384R1 = 0x18,
+	TLS_EC_SECP521R1 = 0x19,
+
+};
+
+uint16_t TLS_elliptic_curves[] = {
+		TLS_EC_SECP256R1,
+		TLS_EC_SECP384R1,
+		TLS_EC_SECP521R1,
+};
+
+enum TLS_version {
+	TLSv1_2 = 0x303,
+};
+
 #define CIPHER_SUITES_NUM	22
 
 enum TLS_cipher_suite {
@@ -24,6 +53,13 @@ enum TLS_cipher_suite {
 	TLS_RSA_WITH_3DES_EDE_CBC_SHA = (0x000a)
 };
 
+enum TLS_compr_suite {
+	TLS_COMPR_NULL = 0,
+};
+
+uint8_t TLS_compr_suites[] = {
+		TLS_COMPR_NULL,
+};
 
 uint16_t TLS_cipher_suites[] = {
 		TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,

@@ -27,10 +27,7 @@ uint8_t http[] = {
 		0x68, 0x74, 0x74, 0x70, 0x2f, 0x31, 0x2e, 0x31
 };
 
-
-uint8_t name[] = {
-		0x77, 0x77, 0x77, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x6C
-};
+const char srv_name[] = "www.google.pl";
 
 void hex_dump(const char *def, uint8_t *data, uint16_t len,
 		uint16_t br)
@@ -51,8 +48,10 @@ uint8_t rands[28];
 
 int TLS_Client_Hello_Set(struct TLS_Client_Hello *client_hello)
 {
-	int i;
+	int i, curr;
 	uint16_t ciphers_size = sizeof(TLS_cipher_suites);
+	uint16_t compr_size = sizeof(TLS_compr_suites);
+	uint16_t srv_size = sizeof(srv_name) - 1;
 	uint8_t *client_hello_array = calloc(LEN, 1);
 
 	client_hello->record_protocol.type = HANDSHAKE;
@@ -60,9 +59,9 @@ int TLS_Client_Hello_Set(struct TLS_Client_Hello *client_hello)
 	client_hello->record_protocol.length = htons(LEN - 5);
 
 	client_hello->handshake.handshake_type = CLIENT_HELLO;
-	client_hello->handshake.length[2] = 156 + ciphers_size;
+	client_hello->handshake.length[2] = 155 + ciphers_size + compr_size;
 
-	client_hello->version = htons(0x303);
+	client_hello->version = htons(TLSv1_2);
 
 	/* 2012... */
 	client_hello->random.time = htonl(time(NULL));
@@ -76,31 +75,41 @@ int TLS_Client_Hello_Set(struct TLS_Client_Hello *client_hello)
 	for (i = 2; i < sizeof(TLS_cipher_suites); i+=2) {
 		*(uint16_t *)&client_hello->flexible_data[i] = htons(TLS_cipher_suites[i/2-1]);
 	}
+	/* Set compresion mode */
+	curr = i + 2;
+	*(uint8_t *)&client_hello->flexible_data[curr++] = compr_size;
+	for (i =0; i<compr_size; ++i) {
+		*(uint8_t *)&client_hello->flexible_data[curr + i] = 0;
+	}
+	curr += 1;
+	printf("\ncurr %d", curr);
 
-	*(uint8_t *)&client_hello->flexible_data[24] = 1;
-	*(uint8_t *)&client_hello->flexible_data[25] = 0;
+	/* Sizeof extensions */
+	*(uint16_t *)&client_hello->flexible_data[curr] = htons(115);
 
-	/* Put some real/random data into the extensions */
-	*(uint16_t *)&client_hello->flexible_data[26] = htons(115);
-	*(uint16_t *)&client_hello->flexible_data[30] = htons(18);
-	*(uint16_t *)&client_hello->flexible_data[32] = htons(16);
-	*(uint16_t *)&client_hello->flexible_data[35] = htons(13);
-	memcpy((uint8_t *)&client_hello->flexible_data[37], name, 13);
+	/* Srv name */
+	curr += 2;
+	*(uint16_t *)&client_hello->flexible_data[curr + 2] = htons(18);
+	*(uint16_t *)&client_hello->flexible_data[curr + 4] = htons(srv_size + 3);
+	*(uint16_t *)&client_hello->flexible_data[curr + 7] = htons(srv_size);
+	memcpy((uint8_t *)&client_hello->flexible_data[curr + 9], srv_name, srv_size);
+
 
 	/* Renegotitation info */
-
-	*(uint16_t *)&client_hello->flexible_data[50] = htons(0xff01);
-	*(uint16_t *)&client_hello->flexible_data[52] = htons(1);
+	curr += 9 + srv_size;
+	*(uint16_t *)&client_hello->flexible_data[curr] = htons(TLS_EXT_RENEGOTIATION_INFO);
+	*(uint16_t *)&client_hello->flexible_data[curr + 2] = htons(1); /* Length */
 
 	/* Elliptic curves */
+	curr += 5;
+	*(uint16_t *)&client_hello->flexible_data[curr] = htons(TLS_EXT_ELLIPTIC_CURVES);
+	*(uint16_t *)&client_hello->flexible_data[curr + 2] = htons(sizeof(TLS_elliptic_curves) + 2);
+	*(uint16_t *)&client_hello->flexible_data[curr + 4] = htons(sizeof(TLS_elliptic_curves));
+	for (i = 0; i < sizeof(TLS_elliptic_curves); i+=2) {
+		*(uint16_t *)&client_hello->flexible_data[curr + 6 + i] = htons(TLS_elliptic_curves[i/2]);
 
-	*(uint16_t *)&client_hello->flexible_data[55] = htons(0x000a);
-	*(uint16_t *)&client_hello->flexible_data[57] = htons(8);
-	*(uint16_t *)&client_hello->flexible_data[59] = htons(6);
-	*(uint16_t *)&client_hello->flexible_data[61] = htons(0x17);
-	*(uint16_t *)&client_hello->flexible_data[63] = htons(0x18);
-	*(uint16_t *)&client_hello->flexible_data[65] = htons(0x19);
-
+	}
+	curr += 6 + sizeof(TLS_elliptic_curves);
 	/* EC point format */
 	*(uint16_t *)&client_hello->flexible_data[67] = htons(0xb);
 	*(uint16_t *)&client_hello->flexible_data[69] = htons(2);
@@ -144,9 +153,6 @@ int TLS_Client_Hello_Set(struct TLS_Client_Hello *client_hello)
 	return 0;
 }
 
-
-
-uint8_t *randp = "abcdabcdabcdabcdabcdabcdabcdabcd";
 int main(int argc, char *argv[])
 {
 	int i;
@@ -188,7 +194,7 @@ int main(int argc, char *argv[])
 
 	printf("\nRead %d bytes", ret);
 
-	hex_dump("Server Hello", buffer, 4096, 32);
+//	hex_dump("Server Hello", buffer, 4096, 32);
 	printf("\n%s", buffer);
 	getc(stdin);
 	close(msock);
