@@ -9,11 +9,15 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
-#define PORTNO	6500
+#define PORTNO	443
 uint8_t buffer[255];
 
 int main(int argc, char *argv[])
 {
+
+	printf("\n%lu",sizeof(TLS_cipher_suites));
+	return 0;
+
 	int ret = 0;
 	int msock, srv_sock;
 	socklen_t addr_len = sizeof(struct sockaddr_in);
